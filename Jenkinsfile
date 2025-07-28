@@ -6,7 +6,7 @@ pipeline{
     }
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        TMDB_V3_API_KEY = credentials{'tdms-api-key'}
+        TMDB_V3_API_KEY = credentials('tmdb-api-key')
     }
     stages {
         stage('clean workspace'){
@@ -30,7 +30,7 @@ pipeline{
         stage("quality gate"){
            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonarqube' 
                 }
             } 
         }
@@ -39,13 +39,13 @@ pipeline{
                 sh "npm install"
             }
         }
-        stage('OWASP FS SCAN') {
+        stage('Owasp scan') {
             steps {
                 dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
-        stage('TRIVY FS SCAN') {
+        stage('Trivy scan') {
             steps {
                 sh "trivy fs . > trivyfs.txt"
             }
@@ -53,22 +53,24 @@ pipeline{
         stage("Docker Build & Push"){
             steps{
                 script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker build --build-arg TMDB_V3_API_KEY=${TMDB_V3_API_KEY} -t netflix ."
-                       sh "docker tag netflix nasi101/netflix:latest "
-                       sh "docker push nasi101/netflix:latest "
+                    withCredentials([string(credentialsId: 'tmdb-api-key', variable: 'TMDB_V3_API_KEY')]) {
+                        withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
+                            sh "docker build --build-arg TMDB_V3_API_KEY=${TMDB_V3_API_KEY} -t netflix ."
+                            sh "docker tag netflix fakefauxyy/netflix:latest "
+                            sh "docker push fakefauxyy/netflix:latest "
+                            }
                     }
                 }
             }
         }
-        stage("TRIVY"){
+        stage("trivy"){
             steps{
-                sh "trivy image nasi101/netflix:latest > trivyimage.txt" 
+                sh "trivy image fakefauxyy/netflix:latest > trivyimage.txt" 
             }
         }
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d -p 8081:80 nasi101/netflix:latest'
+                sh 'docker run -d -p 8081:80 fakefauxyy/netflix:latest'
             }
         }
         stage('Deploy to kubernets'){
@@ -92,7 +94,7 @@ pipeline{
             body: "Project: ${env.JOB_NAME}<br/>" +
                 "Build Number: ${env.BUILD_NUMBER}<br/>" +
                 "URL: ${env.BUILD_URL}<br/>",
-            to: 'iambatmanthegoat@gmail.com',                                #change mail here
+            to: 'gurramtarun29@gmail.com',                                #change mail here
             attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
