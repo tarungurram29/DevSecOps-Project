@@ -1,6 +1,6 @@
 FROM node:16.17.0-alpine AS builder
 WORKDIR /app
-COPY package.json .yarn.lock .yarnrc ./
+COPY package.json yarn.lock .yarnrc ./
 RUN yarn install --network-timeout 600000
 COPY . .
 ARG TMDB_V3_API_KEY
