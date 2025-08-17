@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: blue-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      color: blue
+  template:
+    metadata:
+      name: blue-pod
+      labels:
+        color: blue
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: netflix
+        image: IMAGE_PLACEHOLDER
+        ports:
+          - containerPort: 8000
